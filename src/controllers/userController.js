@@ -2,6 +2,7 @@ const User = require('../models/User')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const validator = require('validator')
+const logActivity = require("../utils/logActivity")
 
 exports.register = async (req, res) => {
     try {
@@ -49,6 +50,11 @@ exports.register = async (req, res) => {
             role
         })
 
+        await logActivity(
+            "REGISTER_USER",
+            `User ${user.username} registered`
+        )
+
         res.json({
             message: 'User created successfully',
             user
@@ -87,6 +93,12 @@ exports.login = async (req, res) => {
             process.env.JWT_SECRET,
             {expiresIn:"1h"}
         )
+
+        await logActivity(
+            "LOGIN",
+            `User ${user.username} logged in`
+        )
+
         res.json({
             message: 'Login successful',
             token: token
@@ -140,6 +152,11 @@ exports.updateUser = async (req, res) => {
             {username, email, role},
             {new: true}
         )
+
+        await logActivity(
+            "UPDATE_USER",
+            `User ${user.username} updated profile`
+        )   
 
         res.json(user)
     } catch (error) {
