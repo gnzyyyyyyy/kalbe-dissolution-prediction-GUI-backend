@@ -19,7 +19,9 @@ const datasetSchema = new mongoose.Schema({
         type: Number
     },
     uploadedBy: {
-        type: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
     },
     uploadedBy: {
         type: String

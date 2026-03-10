@@ -20,6 +20,26 @@ exports.register = async (req, res) => {
             })
         }
 
+        if(role === "administrator") {
+            const adminCount = await User.countDocuments({role:"administrator"})
+
+            if(adminCount >= 5) {
+                return res.status(403).json({
+                    message: "Maximum number of administrators reached"
+                })
+            }
+        }
+
+        if(role === "operator") {
+            const operatorCount = await User.countDocuments({role:"operator"})
+
+            if(operatorCount >= 15) {
+                return res.status(403).json({
+                    message: "Maximum number of operators reached"
+                })
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10)
 
         const user = await User.create({
@@ -94,6 +114,26 @@ exports.updateUser = async (req, res) => {
     try {
         const {id} = req.params
         const {username, email, role} = req.body
+
+        if(role === "administrator") {
+            const adminCount = await User.countDocuments({role:"administrator"})
+
+            if(adminCount >= 5) {
+                return res.status(403).json({
+                    message: "Maximum number of administrators reached"
+                })
+            }
+        }
+
+        if(role === "operator") {
+            const operatorCount = await User.countDocuments({role:"operator"})
+
+            if(operatorCount >= 15) {
+                return res.status(403).json({
+                    message: "Maximum number of operators reached"
+                })
+            }
+        }
 
         const user = await User.findByIdAndUpdate(
             id,

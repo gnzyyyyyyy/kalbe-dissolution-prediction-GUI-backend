@@ -15,12 +15,18 @@ exports.uploadDataset = async (req, res) => {
             })
         }
 
+        if (!req.user) {
+            return res.status(401).json({
+                message: "Unauthorized"
+            })
+        }
+
         const dataset = new Dataset({
             fileName: file.filename,
             originalName: file.originalname,
             filePath: file.path,
             fileSize: file.size,
-            uploadedBy: "test-user" // Configure later after user created by Troy
+            uploadedBy: req.user?.id
         })
         await dataset.save()
 
@@ -44,7 +50,7 @@ exports.uploadDataset = async (req, res) => {
 // GET /api/datasets
 exports.getDatasets = async (req, res) => {
     try{
-        const datasets = await Dataset.find().sort({ uploadTime: -1 })
+        const datasets = await Dataset.find().populate("uploadedBy", "username").sort({ uploadTime: -1 })
 
         res.status(200).json({
             count: datasets.length,
