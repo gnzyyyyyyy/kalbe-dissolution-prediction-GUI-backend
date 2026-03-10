@@ -9,6 +9,7 @@ const connectDB = require("./src/config/db");
 const datasetRoutes = require("./src/routes/datasetRoutes")
 const logRoutes = require("./src/routes/logRoutes")
 const userRoutes = require("./src/routes/userRoute")
+const predictionRoutes = require("./src/routes/predictionRoutes")
 
 const User = require("./src/models/User")
 const bcrypt = require("bcryptjs")
@@ -36,6 +37,7 @@ app.use(express.json())
 app.use("/api/datasets", datasetRoutes)
 app.use("/api/logs", logRoutes)
 app.use("/api/users", userRoutes)
+app.use("/api/predictions", predictionRoutes)
 
 app.get("/", (req, res) => {
     res.send("Kalbe Dissolution Rate API Running...")
