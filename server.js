@@ -26,7 +26,8 @@ async function seedAdmin() {
         await User.create({
             username: "adminKalbe",
             password: password,
-            role: "administrator"
+            role: "administrator",
+            createdBy: "System"
         })
 
         console.log("Admin created")

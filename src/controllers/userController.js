@@ -47,12 +47,13 @@ exports.register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
+            createdBy: req.user?.username || "system",
             role
         })
 
         await logActivity(
             "REGISTER_USER",
-            `User ${user.username} registered`
+            `User ${user.username} registered by ${req.user?.username || "system"}`
         )
 
         res.json({
@@ -88,7 +89,8 @@ exports.login = async (req, res) => {
         const token = jwt.sign(
             {
                 id:user._id,
-                role:user.role
+                role:user.role,
+                username:user.username
             },
             process.env.JWT_SECRET,
             {expiresIn:"1h"}
@@ -149,13 +151,19 @@ exports.updateUser = async (req, res) => {
 
         const user = await User.findByIdAndUpdate(
             id,
-            {username, email, role},
+            {
+                username, 
+                email, 
+                role,
+                updatedBy: req.user?.username,
+                updatedAt: Date.now(),
+            },
             {new: true}
         )
 
         await logActivity(
             "UPDATE_USER",
-            `User ${user.username} updated profile`
+            `User ${user.username} updated by ${req.user?.username}`
         )   
 
         res.json(user)
