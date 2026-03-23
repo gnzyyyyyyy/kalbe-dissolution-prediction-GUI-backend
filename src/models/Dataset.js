@@ -23,9 +23,6 @@ const datasetSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
-    uploadedBy: {
-        type: String
-    },
     uploadTime: {
         type: Date,
         default: Date.now

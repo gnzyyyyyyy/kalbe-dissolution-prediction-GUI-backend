@@ -1,173 +1,202 @@
-const Prediction = require('../models/Prediction')
-const fs = require('fs')
-const {runPrediction} = require('../service/predictionService')
-const PDFDocument = require('pdfkit')
-const {validateFile} = require('../utils/fileValidator')
-const path = require('path')
-const logActivity = require("../utils/logActivity")
+const Prediction = require("../models/Prediction");
+const Dataset = require("../models/Dataset");
+const DatasetReport = require("../models/datasetReport");
+const fs = require("fs");
+const path = require("path");
+const { runPrediction } = require("../service/predictionService");
+const { validateFile } = require("../utils/fileValidator");
+const PDFDocument = require("pdfkit");
+const logActivity = require("../utils/logActivity");
 
 exports.createPrediction = async (req, res) => {
     try {
-        const { dataSetId, reportFileName } = req.body
+        const { dataSetId, reportFileName } = req.body;
 
-        if(!req.body.dataSetId) {
+        if (!dataSetId) {
             return res.status(400).json({
-                message: "Data set id is required"
-            })
+                message: "Data set id is required",
+            });
         }
 
         const prediction = await Prediction.create({
             reportFileName,
             dataSetId,
-            generatedBy: req.user.id
-        })
+            generatedBy: req.user.id,
+        });
 
         await logActivity(
             "RUN_PREDICTION",
-            `User ${req.user.id} ran prediction using dataset ${req.body.dataSetId}`
-        )
+            `User ${req.user.id} ran prediction using dataset ${dataSetId}`,
+            req.user
+        );
 
         res.json({
-            message: 'Prediction created successfully',
-            prediction
-        })
+            message: "Prediction created successfully",
+            prediction,
+        });
 
     } catch (error) {
-        console.log(error)
-        res.status(500).json(error)
+        console.log(error);
+        res.status(500).json(error);
     }
-}
+};
 
 exports.predict = async (req, res) => {
     try {
-        if(!req.file) {
+        if (!req.file) {
             return res.status(400).json({
-                message: "File is required"
-            })
+                message: "File is required",
+            });
         }
 
-        if(!req.body.dataSetId) {
+        if (!req.body.dataSetId) {
             return res.status(400).json({
-                message: "Data set id is required"
-            })
+                message: "Data set id is required",
+            });
         }
 
-        const data = await validateFile(req.file.path)
-
-        const result = await runPrediction(data)
+        const data = await validateFile(req.file.path);
+        const result = await runPrediction(data);
 
         const prediction = await Prediction.create({
             reportFileName: req.file.filename,
             dataSetId: req.body.dataSetId,
             generatedBy: req.user.id,
-            predictedProfile: result
-        })
+            predictedProfile: result,
+        });
+
+        // 🔥 UPDATE DATASET REPORT
+        const dataset = await Dataset.findById(req.body.dataSetId);
+
+        if (dataset) {
+            const baseName = dataset.originalName.replace(/\.[^/.]+$/, "");
+
+            await DatasetReport.findOneAndUpdate(
+                { dataSetId: dataset._id },
+                {
+                    predictionId: prediction._id,
+                    predictionResult: `Report-${baseName}`,
+                    reportCreatedBy: req.user.id,
+                },
+                { new: true }
+            );
+        }
+
+        await logActivity(
+            "RUN_PREDICTION",
+            `User ${req.user.id} ran prediction`,
+            req.user
+        );
 
         res.json({
-            message: 'Prediction created successfully',
+            message: "Prediction created successfully",
             result,
-            prediction
-        })
+            prediction,
+        });
+
     } catch (error) {
-        console.log(error)
-        res.status(500).json(error)
+        console.log(error);
+        res.status(500).json(error);
     }
-}
+};
 
 exports.saveReport = async (req, res) => {
     try {
-        const { id } = req.params
+        const { id } = req.params;
 
         if (!req.file) {
             return res.status(400).json({
-                message: "Report file is required"
-            })
+                message: "Report file is required",
+            });
         }
 
-        const filePath = req.file.path
-        const stats = fs.statSync(filePath)
+        const filePath = req.file.path;
+        const stats = fs.statSync(filePath);
 
         const prediction = await Prediction.findByIdAndUpdate(
             id,
             {
                 reportFilePath: filePath,
-                reportFileSize: stats.size
+                reportFileSize: stats.size,
             },
             { new: true }
-        )
+        );
 
         res.json({
             message: "Report saved successfully",
-            prediction
-        })
+            prediction,
+        });
 
     } catch (error) {
-        console.log(error)
-        res.status(500).json(error)
+        console.log(error);
+        res.status(500).json(error);
     }
-}
+};
 
 exports.exportPDF = async (req, res) => {
     try {
         const prediction = await Prediction.findById(req.params.id)
-        .populate("generatedBy", "username")
+            .populate("generatedBy", "username");
 
-        if(!prediction) {
+        if (!prediction) {
             return res.status(404).json({
-                message: "Prediction not found"
-            })
+                message: "Prediction not found",
+            });
         }
 
-        // folder uploads
-        const uploadDir = path.join(__dirname, "../../uploads")
+        const uploadDir = path.join(__dirname, "../../uploads");
 
-        // pastikan folder ada
         if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true })
+            fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        const fileName = `prediction-${prediction._id}.pdf`
-        const filePath = path.join(uploadDir, fileName)
+        const fileName = `prediction-${prediction._id}.pdf`;
+        const filePath = path.join(uploadDir, fileName);
 
-        const doc = new PDFDocument()
+        const doc = new PDFDocument();
+        const stream = fs.createWriteStream(filePath);
 
-        const stream = fs.createWriteStream(filePath)
+        doc.pipe(stream);
 
-        doc.pipe(stream)
+        doc.fontSize(16).text("Prediction Report", { underline: true });
+        doc.moveDown();
 
-        doc.text("Prediction report")
-        doc.text("Generated by: " + prediction.generatedBy.username)
-        doc.text("Date: " + prediction.generatedAt)
+        doc.fontSize(12).text("Generated by: " + prediction.generatedBy.username);
+        doc.text("Date: " + new Date(prediction.generatedAt).toLocaleString());
+        doc.moveDown();
 
-        if(prediction.predictedProfile) {
-            prediction.predictedProfile.forEach(row => {
-                doc.text(`${row.wavelength} : ${row.dissolution}`)
-            })
+        if (prediction.predictedProfile) {
+            prediction.predictedProfile.forEach((row, index) => {
+                doc.text(
+                    `${index + 1}. Wavelength: ${row.wavelength} | Dissolution: ${row.dissolution}`
+                );
+            });
         }
 
-        doc.end()
+        doc.end();
 
         stream.on("finish", async () => {
 
             await Prediction.findByIdAndUpdate(prediction._id, {
-                reportFilePath: filePath
-            })
+                reportFilePath: filePath,
+            });
 
             await logActivity(
                 "EXPORT_PDF",
-                `User ${req.user.id} exported pdf for prediction ${prediction._id}`
-            )
+                `User ${req.user.id} exported pdf for prediction ${prediction._id}`,
+                req.user
+            );
 
             res.json({
                 message: "PDF generated successfully",
-                filePath
-            })
-        })
+                filePath,
+            });
+        });
 
     } catch (error) {
-        console.log(error)
+        console.log(error);
         res.status(500).json({
-            message: "Failed generate the PDF"
-        })
+            message: "Failed generate the PDF",
+        });
     }
-}
+};

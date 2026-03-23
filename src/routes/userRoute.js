@@ -12,6 +12,10 @@ router.get("/users", verifyToken, isAdmin, userController.getUser)
 
 router.put("/user/:id", verifyToken, isAdmin, userController.updateUser)
 
+router.put("/reactivate/:id", verifyToken, isAdmin, userController.reactivateUser)
+
+router.put("/deactivate/:id", verifyToken, isAdmin, userController.deactivateUser)
+
 router.delete("/user/:id", verifyToken, isAdmin, userController.deleteuser)
 
 module.exports = router

@@ -2,23 +2,18 @@ const fs = require("fs")
 const path = require("path")
 
 const Dataset = require("../models/Dataset");
+const DatasetReport = require("../models/datasetReport");
 const logActivity = require("../utils/logActivity");
 
 // POST /api/datasets/upload
 exports.uploadDataset = async (req, res) => {
-    try{
-        const file = req.file
+    try {
+        const file = req.file;
 
-        if(!file) {
+        if (!file) {
             return res.status(400).json({
-                message: "No file uploaded"
-            })
-        }
-
-        if (!req.user) {
-            return res.status(401).json({
-                message: "Unauthorized"
-            })
+                message: "No file uploaded",
+            });
         }
 
         const dataset = new Dataset({
@@ -26,26 +21,37 @@ exports.uploadDataset = async (req, res) => {
             originalName: file.originalname,
             filePath: file.path,
             fileSize: file.size,
-            uploadedBy: req.user?.id
-        })
-        await dataset.save()
+            uploadedBy: req.user.id,
+        });
+
+        await dataset.save();
+
+        await DatasetReport.create({
+            dataSetId: dataset._id,
+            datasetName: dataset.originalName,
+            uploadedBy: req.user.id,
+            predictionResult: "-",
+        });
 
         await logActivity(
             "UPLOAD_DATASET",
-            `Uploaded dataset ${dataset.originalName}`
-        )
+            `Uploaded dataset ${dataset.originalName}`,
+            req.user
+        );
 
         res.status(201).json({
             message: "File uploaded successfully",
-            dataset
-        })
+            dataset,
+        });
+
     } catch (error) {
+        console.log(error);
         res.status(500).json({
             message: "Error uploading file",
-            error: error.message
-        })
+            error: error.message,
+        });
     }
-}
+};
 
 // GET /api/datasets
 exports.getDatasets = async (req, res) => {
@@ -102,7 +108,8 @@ exports.deleteDataset = async (req, res) => {
 
         await logActivity(
             "DELETE_DATASET",
-            `Deleted dataset ${dataset.originalName}`
+            `Deleted dataset ${dataset.originalName}`,
+            req.user
         )
         res.status(200).json({
             message: "Dataset deleted successfully"
