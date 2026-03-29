@@ -4,16 +4,40 @@ const path = require("path")
 const Dataset = require("../models/Dataset");
 const DatasetReport = require("../models/datasetReport");
 const logActivity = require("../utils/logActivity");
+const { validateFile } = require("../utils/fileValidator");
 
 // POST /api/datasets/upload
 exports.uploadDataset = async (req, res) => {
     try {
         const file = req.file;
-
         if (!file) {
             return res.status(400).json({
                 message: "No file uploaded",
             });
+        }
+
+        // Validate file
+        let data;
+        try {
+            data = await validateFile(req.file.path);
+        } catch (error) {
+            if (fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+
+            return res.status(400).json({
+                message: error.message,
+            });
+        }
+
+        //Check Empty Data
+        if(!data || data.length === 0) {
+            if(fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+            return res.status(400).json({
+                message: "Dataset is emptty or invalid",
+            })
         }
 
         const dataset = new Dataset({
