@@ -113,6 +113,34 @@ exports.getDatasetById = async (req, res) => {
     }
 }
 
+//PUT /api/datasets/:id
+exports.updateDataset = async (req, res) => {
+    try{
+        const dataset = await Dataset.findById(req.params.id)
+        if(!dataset) {
+            return res.status(404).json({
+                message: "Dataset not found"
+            })
+        }
+
+        await dataset.updateOne(req.body)
+
+        await logActivity(
+            "UPDATE_DATASET",
+            `Updated dataset ${dataset.originalName}`,
+            req.user
+        )
+        res.status(200).json({
+            message: "Dataset updated successfully"
+        })
+    } catch (error) {
+        res.status(500).json({
+            message: "Error updating dataset",
+            error: error.message
+        })
+    }
+}
+
 // DELETE /api/datasets/:id
 exports.deleteDataset = async (req, res) => {
     try{
