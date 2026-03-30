@@ -18,16 +18,33 @@ const storage = multer.diskStorage({
 
 // Only allow CSV and XLSX files
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = [".csv", ".xlsx"]
+    const allowedTypes = [
+        ".csv", 
+        ".xlsx", 
+        ".xls"
+    ]
+
+    const allowesMimes = [
+        "text/csv", 
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        "application/vnd.ms-excel"
+    ]
+
     const ext = path.extname(file.originalname).toLowerCase()
 
-    if(allowedTypes.includes(ext)) {
+    if(allowedTypes.includes(ext) && allowesMimes.includes(file.mimetype)) {
         cb(null, true)
     } else {
-        cb(new Error("Only CSV and XLSX files are allowed"), false)
+        cb(new Error("Only CSV, XLS and XLSX files are allowed"), false)
     }
 }
 
-const upload = multer({ storage, fileFilter })
+const upload = multer({ 
+    storage, 
+    fileFilter,
+    limits: {
+        fileSize: 1024 * 1024 * 10
+    }
+})
 
 module.exports = upload

@@ -8,7 +8,16 @@ const {verifyToken}= require("../middleware/authMiddleware");
 router.post(
     "/upload",
     verifyToken,
-    upload.single("dataset"),
+    (req, res, next) => {
+        upload.single("dataset")(req, res, (err) => {
+            if (err) {
+                return res.status(400).json({
+                    message: err.message,
+                });
+            }
+            next();
+        })
+    },
     datasetController.uploadDataset
 );
 
