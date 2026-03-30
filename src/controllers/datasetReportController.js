@@ -58,6 +58,7 @@ exports.generateDatasetReport = async (req, res) => {
 exports.getDatasetReports = async (req, res) => {
     try {
         const reports = await DatasetReport.find()
+            .populate("dataSetId", "originalName")
             .populate("uploadedBy", "username")
             .populate("reportCreatedBy", "username")
             .sort({ createdAt: -1 });

@@ -14,6 +14,7 @@ router.post(
 
 router.get("/", verifyToken, datasetController.getDatasets)
 router.get("/:id", verifyToken, datasetController.getDatasetById)
+router.put("/:id", verifyToken, datasetController.updateDataset)
 router.delete("/:id", verifyToken,datasetController.deleteDataset)
 
 module.exports = router

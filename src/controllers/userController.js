@@ -3,6 +3,19 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const validator = require('validator')
 const logActivity = require("../utils/logActivity")
+const Counter = require("../models/counter")
+
+const getNextSequence = async (name) => {
+    const counter = await Counter.findOneAndUpdate(
+        { name },
+        // $inc means it increment the object with some value
+        { $inc: { sequenceValue: 1 } }, 
+        // New --> true means it will return the updated document
+        // Upsert --> true means it will create the document if it doesn't exist
+        { new: true, upsert: true }
+    )
+    return counter.sequenceValue
+}
 
 exports.register = async (req, res) => {
     try {
@@ -43,7 +56,12 @@ exports.register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10)
 
+        const sequence = await getNextSequence("userId")
+        // padStart means make it 3 digits with 0 in the beginning
+        const userId = "U" + sequence.toString().padStart(3, '0')
+
         const user = await User.create({
+            userId,
             username,
             email,
             password: hashedPassword,
@@ -76,6 +94,12 @@ exports.login = async (req, res) => {
         if(!user){
             return res.status(404).json({
                 message: 'User not found'
+            })
+        }
+
+        if (user.role === "nonActive") {
+            return res.status(403).json({
+                message: "User is not active"
             })
         }
 
