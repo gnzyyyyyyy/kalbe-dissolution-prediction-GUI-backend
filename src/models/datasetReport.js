@@ -30,6 +30,12 @@ const datasetReportSchema = new mongoose.Schema({
         default: null,
     },
 
+    statusReport: {
+        type: String,
+        enum: ["Archived", "Active"],
+        default: "Active",
+    },
+
     createdAt: {
         type: Date,
         default: Date.now,

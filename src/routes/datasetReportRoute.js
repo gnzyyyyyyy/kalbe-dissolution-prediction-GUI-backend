@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const { getDatasetReports } = require("../controllers/datasetReportController");
-const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
+const { getDatasetReports, updateDatasetReport } = require("../controllers/datasetReportController");
+const { verifyToken } = require("../middleware/authMiddleware");
 
-router.get("/", verifyToken, isAdmin, getDatasetReports);
+router.get("/", verifyToken, getDatasetReports);
+router.put("/update/:id", verifyToken, updateDatasetReport);
 
 module.exports = router;
